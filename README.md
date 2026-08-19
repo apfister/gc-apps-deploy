@@ -1,34 +1,49 @@
-# gc-apps deploy action
+# GC Apps deploy action
 
-Publishers consume this action through the moving major tag:
+Publish a finished static Artifact to GC Apps using GitHub's short-lived OIDC
+identity. The action creates no deployment secret and runs no App build code.
+
+## Usage
+
+The calling job must run on a GitHub-hosted runner and grant `id-token: write`:
 
 ```yaml
-- uses: apfister/gc-apps-platform/.github/actions/deploy@v1
-  with:
-    path: dist
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - run: npm ci && npm run build
+      - uses: apfister/gc-apps-deploy@v1
+        with:
+          path: dist
 ```
 
-The action requests a GitHub OIDC token for
-`https://gcapps.esrigcazure.com/_deploy`, archives the contents of `path`, and
-streams the Artifact to the receiver. The calling job must grant
-`id-token: write`.
+The `path` input defaults to `dist`. Its directory must contain a regular
+`index.html` at the root and may contain only regular files and directories.
 
-See [Publish an App](../../../docs/publishing.md) for registration, a complete
-workflow, and failure guidance.
+The action requests an OIDC token for
+`https://gcapps.esrigcazure.com/_deploy`, archives the Artifact, and streams it
+to the platform. The repository must be registered with a GC Apps Operator
+before its first Deployment.
 
-## Moving `v1`
+## Releases
 
-Each release receives an immutable semantic tag such as `v1.0.0`. Move `v1`
-only after that immutable tag passes the action integration test and a real
-Deployment from the throwaway App. Move it deliberately:
+Semantic tags such as `v1.0.0` are immutable. The moving `v1` tag changes only
+after the immutable tag passes the action integration test and a real canary
+Deployment. Breaking input or behavior changes require a new major version.
 
-```bash
-git tag --annotate v1.0.0 --message "gc-apps deploy action v1.0.0"
-git push origin refs/tags/v1.0.0
-# Run the throwaway App against @v1.0.0 before moving the shared major tag.
-git tag --force v1 'v1.0.0^{}'
-git push --force origin refs/tags/v1
-```
+## Security
 
-Breaking input or behavior changes require `v2`. If a release fails after the
-move, point `v1` back to the previous verified immutable tag.
+Do not print the GitHub OIDC token or add a long-lived platform credential. The
+action masks the token before uploading the Artifact. Report vulnerabilities
+privately to the repository owner rather than opening a public issue with
+credential or platform details.
+
+## License
+
+MIT
