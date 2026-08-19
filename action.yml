@@ -1,0 +1,17 @@
+name: Deploy to gc-apps
+description: Publish a built static App to gc-apps using GitHub OIDC
+
+inputs:
+  path:
+    description: Directory whose contents form the Artifact root
+    required: false
+    default: dist
+
+runs:
+  using: composite
+  steps:
+    - name: Publish Artifact
+      shell: bash
+      env:
+        GCAPPS_ARTIFACT_PATH: ${{ inputs.path }}
+      run: bash "$GITHUB_ACTION_PATH/deploy.sh" "$GCAPPS_ARTIFACT_PATH"
