@@ -13,6 +13,9 @@ The action requests a GitHub OIDC token for
 streams the Artifact to the receiver. The calling job must grant
 `id-token: write`.
 
+See [Publish an App](../../../docs/publishing.md) for registration, a complete
+workflow, and failure guidance.
+
 ## Moving `v1`
 
 Each release receives an immutable semantic tag such as `v1.0.0`. Move `v1`
