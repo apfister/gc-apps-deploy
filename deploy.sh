@@ -20,10 +20,14 @@ done
   echo "Artifact path does not exist or is not a directory: ${ARTIFACT_PATH}" >&2
   exit 1
 }
-[[ -f "${ARTIFACT_PATH}/index.html" && ! -L "${ARTIFACT_PATH}/index.html" ]] || {
-  echo "Artifact must contain a regular index.html at its root" >&2
+if [[ -f "${ARTIFACT_PATH}/index.html" && ! -L "${ARTIFACT_PATH}/index.html" ]]; then
+  :
+elif [[ -f "${ARTIFACT_PATH}/gcapps.json" && ! -L "${ARTIFACT_PATH}/gcapps.json" ]]; then
+  :
+else
+  echo "Artifact must contain a regular index.html or gcapps.json at its root" >&2
   exit 1
-}
+fi
 
 unsafe_entry="$(find "${ARTIFACT_PATH}" ! -type d ! -type f -print -quit)"
 [[ -z "${unsafe_entry}" ]] || {

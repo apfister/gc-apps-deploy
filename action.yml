@@ -1,5 +1,5 @@
-name: Deploy to gc-apps
-description: Publish a built static App to gc-apps using GitHub OIDC
+name: Deploy to GC Apps
+description: Publish a built static or service App to GC Apps using GitHub OIDC
 
 inputs:
   path:

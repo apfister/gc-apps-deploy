@@ -57,7 +57,7 @@ class Receiver(BaseHTTPRequestHandler):
 
 
 class DeployActionTest(unittest.TestCase):
-    def test_uploads_artifact_with_oidc(self):
+    def run_action(self, files):
         Receiver.uploaded = None
         server = ThreadingHTTPServer(("127.0.0.1", 0), Receiver)
         thread = threading.Thread(target=server.serve_forever)
@@ -69,9 +69,10 @@ class DeployActionTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             root = pathlib.Path(temporary)
             artifact = root / "dist"
-            (artifact / "assets").mkdir(parents=True)
-            (artifact / "index.html").write_text("hello", encoding="utf-8")
-            (artifact / "assets" / "app.js").write_text("javascript", encoding="utf-8")
+            for relative_path, content in files.items():
+                path = artifact / relative_path
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(content, encoding="utf-8")
             endpoint = f"http://127.0.0.1:{server.server_port}"
             environment = os.environ | {
                 "ACTIONS_ID_TOKEN_REQUEST_URL": endpoint + "/oidc?job=deploy",
@@ -88,12 +89,40 @@ class DeployActionTest(unittest.TestCase):
                 env=environment,
             )
 
+        return result, Receiver.uploaded
+
+    def test_uploads_static_artifact_with_oidc(self):
+        result, uploaded = self.run_action({
+            "index.html": "hello",
+            "assets/app.js": "javascript",
+        })
+
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("Deployment succeeded", result.stdout)
-        self.assertEqual(Receiver.uploaded["authorization"], "Bearer signed-token")
-        self.assertEqual(Receiver.uploaded["size"], str(len("hello") + len("javascript")))
-        self.assertEqual(Receiver.uploaded["files"]["index.html"], b"hello")
-        self.assertEqual(Receiver.uploaded["files"]["assets/app.js"], b"javascript")
+        self.assertEqual(uploaded["authorization"], "Bearer signed-token")
+        self.assertEqual(uploaded["size"], str(len("hello") + len("javascript")))
+        self.assertEqual(uploaded["files"]["index.html"], b"hello")
+        self.assertEqual(uploaded["files"]["assets/app.js"], b"javascript")
+
+    def test_uploads_service_artifact_with_oidc(self):
+        manifest = '{"version":1,"type":"service"}'
+        result, uploaded = self.run_action({
+            "gcapps.json": manifest,
+            "api/server.js": "server",
+        })
+
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("Deployment succeeded", result.stdout)
+        self.assertEqual(uploaded["authorization"], "Bearer signed-token")
+        self.assertEqual(uploaded["files"]["gcapps.json"], manifest.encode())
+        self.assertEqual(uploaded["files"]["api/server.js"], b"server")
+
+    def test_rejects_artifact_without_contract_marker(self):
+        result, uploaded = self.run_action({"assets/app.js": "javascript"})
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("regular index.html or gcapps.json", result.stderr)
+        self.assertIsNone(uploaded)
 
 
 if __name__ == "__main__":

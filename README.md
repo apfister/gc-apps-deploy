@@ -1,6 +1,6 @@
 # GC Apps deploy action
 
-Publish a finished static Artifact to GC Apps using GitHub's short-lived OIDC
+Publish a finished static or service Artifact to GC Apps using GitHub's short-lived OIDC
 identity. The action creates no deployment secret and runs no App build code.
 
 ## Usage
@@ -23,8 +23,10 @@ jobs:
           path: dist
 ```
 
-The `path` input defaults to `dist`. Its directory must contain a regular
-`index.html` at the root and may contain only regular files and directories.
+The `path` input defaults to `dist`. A static Artifact must contain regular root
+`index.html`; a service Artifact must contain regular root `gcapps.json`. Artifacts
+may contain only regular files and directories. The platform validates the selected
+App Type and complete Artifact contract.
 
 The action requests an OIDC token for
 `https://gcapps.esrigcazure.com/_deploy`, archives the Artifact, and streams it
